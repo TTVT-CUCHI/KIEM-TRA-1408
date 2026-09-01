@@ -135,6 +135,8 @@
     display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--text);
   }
   .stt-btn.sel{background:var(--teal);border-color:var(--teal);color:#fff;font-weight:600;}
+  .stt-btn.used{background:#EFF1F0;border-color:#E3E6E4;color:#9AA6A2;cursor:not-allowed;}
+  .stt-btn.used:active{transform:scale(0.98);}
 
   .id-preview{
     margin-top:16px;padding:12px 14px;border-radius:10px;
@@ -271,6 +273,64 @@ const GROUPS = [
   {code:"IV",  name:"Nghiệm thu hình ảnh",               count:10},
 ];
 
+/* Danh sách chọn sẵn */
+const OPTIONS = {
+  nguoiKT: ["Đỗ Thanh Hiệp","Nguyễn Hữu Tòng","Nguyễn Anh Tuấn","Nguyễn Văn Toàn","Ngô Văn Thành","Lê Châu Duy Triệu","Nguyễn Hoài Trung","Lê Minh Long"],
+  chucVu:  ["HTKT","PGD","Tổ trưởng"],
+  donVi:   ["BGD","KV Tổ KTĐB Bình Mỹ 1","KV Tổ KTĐB Bình Mỹ 2","KV Tổ KTĐB Củ Chi 1","KV Tổ KTĐB Củ Chi 2","KV Tổ KTĐB Phú Hòa Đông 1","KV Tổ KTĐB Phú Hòa Đông 2"],
+  noiDung: ["Trải nghiệm KH","GHTT","BTBD","NTHA"],
+};
+
+/* Tự động gán Chức vụ khi chọn Người kiểm tra */
+const PERSON_ROLE_MAP = {
+  "Đỗ Thanh Hiệp":"HTKT",
+  "Nguyễn Hữu Tòng":"PGD",
+  "Nguyễn Anh Tuấn":"Tổ trưởng",
+  "Nguyễn Văn Toàn":"Tổ trưởng",
+  "Ngô Văn Thành":"Tổ trưởng",
+  "Lê Châu Duy Triệu":"Tổ trưởng",
+  "Nguyễn Hoài Trung":"Tổ trưởng",
+  "Lê Minh Long":"Tổ trưởng",
+};
+
+/* Vẽ 1 ô dạng dropdown, có lựa chọn "Khác - tự nhập" */
+function mountSelectField(container, key, label, options, placeholder, onSelect){
+  const isOther = state._other[key];
+  const val = state[key];
+  const box = el(`<div class="field">
+    <label>${label}</label>
+    <select>
+      <option value="">— Chọn ${label.toLowerCase()} —</option>
+      ${options.map(o=>`<option value="${o}">${o}</option>`).join('')}
+      <option value="__other__">Khác — tự nhập</option>
+    </select>
+  </div>`);
+  const select = box.querySelector('select');
+  if(isOther){ select.value = "__other__"; }
+  else if(options.includes(val)){ select.value = val; }
+  else { select.value = ""; }
+
+  select.onchange = ()=>{
+    if(select.value === "__other__"){
+      state._other[key] = true;
+      state[key] = "";
+    } else {
+      state._other[key] = false;
+      state[key] = select.value;
+    }
+    if(onSelect) onSelect(select.value);
+    renderStep();
+  };
+
+  if(isOther){
+    const txt = el(`<input type="text" placeholder="${placeholder}" value="${val}" style="margin-top:8px">`);
+    txt.oninput = e=>{ state[key]=e.target.value; validateStep(); };
+    box.appendChild(txt);
+  }
+
+  container.appendChild(box);
+}
+
 const STEPS = ["Hạng mục","Người kiểm tra","Nội dung kiểm tra","Vị trí & kết quả","Hình ảnh hiện trường","Lỗi & khắc phục","Xác nhận & gửi"];
 
 let state = {
@@ -280,14 +340,33 @@ let state = {
   toaDo:"", ketQua:"", hinhAnhQuyDinh:"",
   loiTonTai:"", phanLoaiLoi:"", nguyenNhan:"", danhGia:"", deXuat:"", boPhan:"", thoiGianKhacPhuc:"",
   photos:[null,null,null],
+  _other:{nguoiKT:false, chucVu:false, donVi:false, noiDung:false},
 };
 
 let step = 0;
 const totalSteps = 7;
+let usedIdsCache = null;
+let isFetchingUsed = false;
 
 function todayStr(){
   const d = new Date();
   return String(d.getDate()).padStart(2,'0')+"/"+String(d.getMonth()+1).padStart(2,'0')+"/"+d.getFullYear();
+}
+
+function fetchUsedIds(cb){
+  if(isFetchingUsed) return;
+  isFetchingUsed = true;
+  fetch(APPS_SCRIPT_URL + "?action=usedIds")
+    .then(r=>r.json())
+    .then(data=>{
+      usedIdsCache = data.usedIds || [];
+      isFetchingUsed = false;
+      cb && cb();
+    })
+    .catch(()=>{
+      isFetchingUsed = false;
+      cb && cb();
+    });
 }
 
 function currentId(){
@@ -338,12 +417,17 @@ function renderStep(){
 function stepGroup(){
   const wrap = el(`<div>
     <div class="step-heading"><span class="num">1</span><h2 style="display:inline">Chọn hạng mục kiểm tra</h2>
-      <p>Chọn nhóm và số thứ tự tương ứng với hạng mục bạn đang thực hiện.</p>
+      <p>Chọn nhóm và số thứ tự tương ứng với hạng mục bạn đang thực hiện. Mục có dấu ✓ nghĩa là đã có người nhập, không chọn lại được.</p>
     </div>
     <div class="group-grid" id="groupGrid"></div>
     <div id="sttArea"></div>
     <div id="idPreviewArea"></div>
   </div>`);
+
+  if(usedIdsCache === null){
+    wrap.appendChild(el(`<div class="hint" style="margin-top:12px">⏳ Đang tải danh sách mục đã nhập...</div>`));
+    fetchUsedIds(()=>{ if(step===0) renderStep(); });
+  }
 
   const grid = wrap.querySelector('#groupGrid');
   GROUPS.forEach(g=>{
@@ -359,8 +443,17 @@ function stepGroup(){
     const g = GROUPS.find(x=>x.code===state.group);
     const sttGrid = el(`<div class="stt-grid"></div>`);
     for(let n=1;n<=g.count;n++){
-      const b = el(`<div class="stt-btn ${state.stt===n?'sel':''}">${n}</div>`);
-      b.onclick = ()=>{ state.stt=n; renderStep(); };
+      const idStr = g.code+"-"+String(n).padStart(2,'0');
+      const isUsed = (usedIdsCache||[]).includes(idStr);
+      const b = el(`<div class="stt-btn ${state.stt===n?'sel':''} ${isUsed?'used':''}">${isUsed?'✓':n}</div>`);
+      if(isUsed){
+        b.onclick = ()=>{
+          const t = showToast("Mục "+idStr+" đã có người nhập, vui lòng chọn mục khác");
+          setTimeout(()=>t.remove(), 2200);
+        };
+      } else {
+        b.onclick = ()=>{ state.stt=n; renderStep(); };
+      }
       sttGrid.appendChild(b);
     }
     sttArea.appendChild(el(`<div class="field" style="margin-top:16px;margin-bottom:0"><label>Số thứ tự trong nhóm ${g.code}</label></div>`));
@@ -378,21 +471,25 @@ function stepGroup(){
 function stepPerson(){
   const wrap = el(`<div>
     <div class="step-heading"><span class="num">2</span><h2 style="display:inline">Thông tin người kiểm tra</h2>
-      <p>Điền thông tin của người thực hiện kiểm tra hôm nay.</p>
+      <p>Chọn thông tin của người thực hiện kiểm tra hôm nay.</p>
     </div>
-    <div class="field"><label>Họ tên người kiểm tra</label>
-      <input type="text" id="f_nguoiKT" placeholder="VD: Nguyễn Văn A" value="${state.nguoiKT}"></div>
-    <div class="field"><label>Chức vụ</label>
-      <input type="text" id="f_chucVu" placeholder="VD: Kỹ thuật viên địa bàn" value="${state.chucVu}"></div>
-    <div class="field"><label>Đơn vị</label>
-      <input type="text" id="f_donVi" placeholder="VD: Tổ kỹ thuật quận X" value="${state.donVi}"></div>
+    <div id="fld_nguoiKT"></div>
+    <div id="fld_chucVu"></div>
+    <div id="fld_donVi"></div>
     <div class="field"><label>Ngày kiểm tra</label>
-      <input type="text" id="f_ngayKT" value="${state.ngayKT}" disabled style="color:var(--muted);background:#F0F2F1">
+      <input type="text" value="${state.ngayKT}" disabled style="color:var(--muted);background:#F0F2F1">
       <div class="hint">Tự động lấy theo ngày hôm nay.</div></div>
   </div>`);
-  ['nguoiKT','chucVu','donVi'].forEach(k=>{
-    wrap.querySelector('#f_'+k).oninput = e=>{ state[k]=e.target.value; validateStep(); };
+
+  mountSelectField(wrap.querySelector('#fld_nguoiKT'), 'nguoiKT', 'Người kiểm tra', OPTIONS.nguoiKT, 'Nhập tên người kiểm tra', (val)=>{
+    if(PERSON_ROLE_MAP[val]){
+      state.chucVu = PERSON_ROLE_MAP[val];
+      state._other.chucVu = false;
+    }
   });
+  mountSelectField(wrap.querySelector('#fld_chucVu'), 'chucVu', 'Chức vụ', OPTIONS.chucVu, 'Nhập chức vụ');
+  mountSelectField(wrap.querySelector('#fld_donVi'), 'donVi', 'Đơn vị', OPTIONS.donVi, 'Nhập tên đơn vị');
+
   return wrap;
 }
 
@@ -402,8 +499,7 @@ function stepContent(){
     <div class="step-heading"><span class="num">3</span><h2 style="display:inline">Nội dung kiểm tra</h2>
       <p>Mô tả đối tượng và nội dung đang kiểm tra.</p>
     </div>
-    <div class="field"><label>Nội dung kiểm tra</label>
-      <input type="text" id="f_noiDung" placeholder="VD: Kiểm tra chất lượng lắp đặt" value="${state.noiDung}"></div>
+    <div id="fld_noiDung"></div>
     <div class="field"><label>Chi tiết nội dung</label>
       <textarea id="f_chiTiet" placeholder="Mô tả chi tiết hạng mục kiểm tra...">${state.chiTiet}</textarea></div>
     <div class="field"><label>Mã thuê bao / Mã đặt trạm / Mã tủ cáp, tập điểm</label>
@@ -411,7 +507,10 @@ function stepContent(){
     <div class="field"><label>Tên khách hàng / Địa chỉ đài trạm / Tủ cáp, tập điểm</label>
       <input type="text" id="f_tenKH" placeholder="VD: Trần Thị B — 12 Lê Lợi, P.3" value="${state.tenKH}"></div>
   </div>`);
-  const map = {noiDung:'f_noiDung',chiTiet:'f_chiTiet',maThueBao:'f_maThueBao',tenKH:'f_tenKH'};
+
+  mountSelectField(wrap.querySelector('#fld_noiDung'), 'noiDung', 'Nội dung kiểm tra', OPTIONS.noiDung, 'Nhập nội dung kiểm tra');
+
+  const map = {chiTiet:'f_chiTiet',maThueBao:'f_maThueBao',tenKH:'f_tenKH'};
   Object.entries(map).forEach(([k,id])=>{
     wrap.querySelector('#'+id).oninput = e=>{ state[k]=e.target.value; validateStep(); };
   });
@@ -648,24 +747,35 @@ function submitData(){
     .then(r=>r.text())
     .then(txt=>{
       toast.remove();
-      showDoneScreen(true, txt);
+      const ok = /^OK/i.test(txt.trim());
+      const isDup = /^DUPLICATE/i.test(txt.trim());
+      showDoneScreen(ok, txt, isDup);
     })
     .catch(err=>{
       toast.remove();
-      showDoneScreen(false, err.message);
+      showDoneScreen(false, err.message, false);
     });
 }
 
-function showDoneScreen(success, msg){
+function showDoneScreen(success, msg, isDup){
   const app = document.getElementById('app');
+  let title, desc;
+  if(success){
+    title = "Đã gửi thành công";
+    desc = "Dữ liệu và hình ảnh của mục <b>"+currentId()+"</b> đã được ghi vào Google Sheets.";
+  } else if(isDup){
+    title = "Mục này đã có người nhập";
+    desc = "Mục <b>"+currentId()+"</b> vừa được người khác nhập trước bạn vài giây. Hãy tải lại trang và chọn 1 mục khác.";
+  } else {
+    title = "Gửi thất bại";
+    desc = "Có lỗi xảy ra: "+msg+". Kiểm tra kết nối mạng và thử lại.";
+  }
   app.innerHTML = `<div class="done-screen">
     <div class="done-badge" style="${success?'':'background:#FBEBE7;color:var(--danger)'}">${success?'✓':'!'}</div>
-    <h2>${success?'Đã gửi thành công':'Gửi thất bại'}</h2>
-    <p>${success
-        ? 'Dữ liệu và hình ảnh của mục <b>'+currentId()+'</b> đã được ghi vào Google Sheets.'
-        : 'Có lỗi xảy ra: '+msg+'. Kiểm tra kết nối mạng và thử lại.'}</p>
+    <h2>${title}</h2>
+    <p>${desc}</p>
     <button class="btn btn-next" style="max-width:220px" onclick="location.reload()">
-      ${success ? 'Nhập mục khác' : 'Thử lại'}
+      ${success ? 'Nhập mục khác' : (isDup ? 'Tải lại trang' : 'Thử lại')}
     </button>
   </div>`;
 }
@@ -673,4 +783,6 @@ function showDoneScreen(success, msg){
 renderStep();
 </script>
 </body>
+</html>
+
 </html>
