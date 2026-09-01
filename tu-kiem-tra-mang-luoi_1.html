@@ -1,0 +1,676 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+<title>Tự Kiểm Tra Mạng Lưới</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#0B2540;
+    --teal:#0F7173;
+    --teal-dark:#0A5456;
+    --amber:#C97A25;
+    --green:#2F7D5C;
+    --bg:#F4F6F5;
+    --card:#FFFFFF;
+    --line:#DDE3E1;
+    --text:#12242E;
+    --muted:#5B6B71;
+    --danger:#B4432E;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--bg);
+    font-family:'Inter',sans-serif;
+    color:var(--text);
+    -webkit-tap-highlight-color:transparent;
+  }
+  h1,h2,h3,.display{font-family:'Space Grotesk',sans-serif;}
+  .mono{font-family:'IBM Plex Mono',monospace;}
+
+  #app{
+    max-width:520px;
+    margin:0 auto;
+    min-height:100vh;
+    background:var(--bg);
+    display:flex;
+    flex-direction:column;
+    position:relative;
+  }
+
+  /* HEADER */
+  header{
+    background:var(--ink);
+    color:#fff;
+    padding:20px 20px 16px;
+    position:sticky;
+    top:0;
+    z-index:20;
+  }
+  header .title-row{display:flex;align-items:center;justify-content:space-between;}
+  header h1{font-size:19px;margin:0;font-weight:600;letter-spacing:0.2px;}
+  header .sub{font-size:12.5px;color:#9FB6BC;margin-top:2px;}
+  .id-chip{
+    background:rgba(255,255,255,0.1);
+    border:1px solid rgba(255,255,255,0.18);
+    border-radius:8px;
+    padding:5px 10px;
+    font-size:13px;
+    font-family:'IBM Plex Mono',monospace;
+    color:#CFE8E6;
+  }
+
+  .progress-track{
+    display:flex;
+    gap:5px;
+    margin-top:14px;
+  }
+  .progress-seg{
+    flex:1;
+    height:4px;
+    border-radius:3px;
+    background:rgba(255,255,255,0.16);
+    overflow:hidden;
+  }
+  .progress-seg.done{background:var(--teal);}
+  .progress-seg.active{background:linear-gradient(90deg,var(--teal) 50%,rgba(255,255,255,0.16) 50%);}
+  .step-label{font-size:12px;color:#9FB6BC;margin-top:8px;}
+  .step-label b{color:#fff;font-weight:600;}
+
+  /* CONTENT */
+  main{
+    flex:1;
+    padding:20px 20px 110px;
+  }
+  .step-heading{margin-bottom:16px;}
+  .step-heading .num{
+    display:inline-flex;align-items:center;justify-content:center;
+    width:26px;height:26px;border-radius:7px;
+    background:var(--teal);color:#fff;font-size:13px;font-weight:600;
+    margin-right:8px;font-family:'Space Grotesk',sans-serif;
+  }
+  .step-heading h2{font-size:18px;margin:10px 0 2px;font-weight:600;}
+  .step-heading p{font-size:13.5px;color:var(--muted);margin:0;line-height:1.5;}
+
+  .field{margin-bottom:18px;}
+  .field label{
+    display:block;font-size:13.5px;font-weight:600;color:var(--ink);
+    margin-bottom:6px;
+  }
+  .field .hint{font-size:12px;color:var(--muted);margin-top:5px;line-height:1.4;}
+  input[type=text], input[type=date], textarea, select{
+    width:100%;
+    border:1.5px solid var(--line);
+    background:var(--card);
+    border-radius:10px;
+    padding:12px 13px;
+    font-size:15px;
+    font-family:'Inter',sans-serif;
+    color:var(--text);
+    outline:none;
+    transition:border-color .15s;
+  }
+  input:focus, textarea:focus, select:focus{border-color:var(--teal);}
+  textarea{min-height:84px;resize:vertical;line-height:1.5;}
+  select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='9'%3E%3Cpath d='M1 1l6 6 6-6' stroke='%235B6B71' stroke-width='1.6' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 14px center;padding-right:36px;}
+
+  /* Group/STT picker */
+  .group-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+  .group-btn{
+    border:1.5px solid var(--line);background:var(--card);
+    border-radius:12px;padding:14px 12px;text-align:left;cursor:pointer;
+  }
+  .group-btn .g{font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:20px;color:var(--ink);}
+  .group-btn .t{font-size:12px;color:var(--muted);margin-top:3px;line-height:1.4;}
+  .group-btn.sel{border-color:var(--teal);background:#EAF5F3;}
+  .group-btn.sel .g{color:var(--teal-dark);}
+
+  .stt-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin-top:14px;}
+  .stt-btn{
+    aspect-ratio:1;border:1.5px solid var(--line);background:var(--card);
+    border-radius:9px;font-family:'IBM Plex Mono',monospace;font-size:14px;
+    display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--text);
+  }
+  .stt-btn.sel{background:var(--teal);border-color:var(--teal);color:#fff;font-weight:600;}
+
+  .id-preview{
+    margin-top:16px;padding:12px 14px;border-radius:10px;
+    background:#EAF5F3;border:1px solid #BFE0DB;
+    font-family:'IBM Plex Mono',monospace;font-size:14px;color:var(--teal-dark);
+    display:flex;align-items:center;justify-content:space-between;
+  }
+
+  /* GPS */
+  .gps-box{
+    border:1.5px dashed var(--line);border-radius:12px;padding:16px;text-align:center;background:var(--card);
+  }
+  .gps-box.got{border-style:solid;border-color:var(--green);background:#EEF6F1;}
+  .gps-btn{
+    display:inline-flex;align-items:center;gap:8px;
+    background:var(--teal);color:#fff;border:none;border-radius:10px;
+    padding:11px 20px;font-size:14.5px;font-weight:600;cursor:pointer;
+    font-family:'Inter',sans-serif;
+  }
+  .gps-coord{margin-top:10px;font-family:'IBM Plex Mono',monospace;font-size:13.5px;color:var(--green);}
+  .gps-status{font-size:12.5px;color:var(--muted);margin-top:8px;}
+  .map-link{font-size:12.5px;color:var(--teal-dark);text-decoration:underline;margin-top:6px;display:inline-block;}
+
+  /* Result pills */
+  .pill-row{display:flex;gap:8px;flex-wrap:wrap;}
+  .pill{
+    flex:1;min-width:100px;border:1.5px solid var(--line);background:var(--card);
+    border-radius:10px;padding:11px 8px;text-align:center;font-size:13.5px;font-weight:600;
+    cursor:pointer;color:var(--muted);
+  }
+  .pill[data-v="Đạt"].sel{background:#EAF6EF;border-color:var(--green);color:var(--green);}
+  .pill[data-v="Không đạt"].sel{background:#FBEBE7;border-color:var(--danger);color:var(--danger);}
+  .pill[data-v="Cần theo dõi"].sel{background:#FCF2E3;border-color:var(--amber);color:var(--amber);}
+
+  /* Photos */
+  .photo-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;}
+  .photo-slot{
+    aspect-ratio:3/4;border-radius:12px;border:1.5px dashed var(--line);
+    background:var(--card);display:flex;flex-direction:column;align-items:center;justify-content:center;
+    cursor:pointer;position:relative;overflow:hidden;
+  }
+  .photo-slot.filled{border-style:solid;border-color:var(--teal);}
+  .photo-slot img{width:100%;height:100%;object-fit:cover;}
+  .photo-slot .plus{font-size:26px;color:var(--muted);}
+  .photo-slot .lab{font-size:11px;color:var(--muted);margin-top:4px;}
+  .photo-slot .rm{
+    position:absolute;top:6px;right:6px;background:rgba(11,37,64,0.75);color:#fff;
+    width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;
+  }
+
+  /* Summary */
+  .summary-card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:12px;}
+  .summary-card h3{font-size:13px;color:var(--muted);margin:0 0 10px;font-weight:600;text-transform:none;}
+  .srow{display:flex;justify-content:space-between;gap:14px;padding:6px 0;font-size:14px;border-top:1px solid #EEF1F0;}
+  .srow:first-of-type{border-top:none;}
+  .srow .k{color:var(--muted);flex-shrink:0;}
+  .srow .v{text-align:right;font-weight:500;}
+
+  /* Footer nav */
+  footer{
+    position:sticky;bottom:0;background:var(--bg);
+    padding:14px 20px 20px;
+    display:flex;gap:10px;
+    border-top:1px solid var(--line);
+    max-width:520px;
+  }
+  .btn{
+    flex:1;border:none;border-radius:11px;padding:14px;font-size:15px;font-weight:600;
+    font-family:'Inter',sans-serif;cursor:pointer;
+  }
+  .btn-back{background:var(--card);color:var(--ink);border:1.5px solid var(--line);flex:0 0 92px;}
+  .btn-next{background:var(--teal);color:#fff;}
+  .btn-next:disabled{background:#B9CBC9;color:#fff;}
+  .btn-submit{background:var(--ink);color:#fff;}
+
+  /* Success screen */
+  .done-screen{
+    flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    padding:40px 30px;text-align:center;
+  }
+  .done-badge{
+    width:64px;height:64px;border-radius:50%;background:#EAF6EF;color:var(--green);
+    display:flex;align-items:center;justify-content:center;font-size:30px;margin-bottom:20px;
+  }
+  .done-screen h2{font-size:20px;margin:0 0 8px;}
+  .done-screen p{font-size:14px;color:var(--muted);line-height:1.6;margin:0 0 26px;}
+
+  .toast{
+    position:fixed;left:50%;bottom:100px;transform:translateX(-50%);
+    background:var(--ink);color:#fff;padding:11px 18px;border-radius:10px;font-size:13.5px;
+    max-width:400px;text-align:center;z-index:50;box-shadow:0 8px 24px rgba(0,0,0,0.2);
+  }
+  .spinner{
+    width:16px;height:16px;border:2px solid rgba(255,255,255,0.35);border-top-color:#fff;
+    border-radius:50%;display:inline-block;animation:spin .7s linear infinite;vertical-align:-3px;margin-right:8px;
+  }
+  @keyframes spin{to{transform:rotate(360deg);}}
+  .hidden{display:none !important;}
+</style>
+</head>
+<body>
+<div id="app">
+
+  <header>
+    <div class="title-row">
+      <div>
+        <h1>Tự Kiểm Tra Mạng Lưới</h1>
+        <div class="sub">Phụ lục 1 — Tháng 09/2026</div>
+      </div>
+      <div class="id-chip" id="headerIdChip">Chưa chọn mục</div>
+    </div>
+    <div class="progress-track" id="progressTrack"></div>
+    <div class="step-label">Bước <b id="stepNum">1</b>/7 — <span id="stepName">Chọn hạng mục kiểm tra</span></div>
+  </header>
+
+  <main id="main"></main>
+
+  <footer id="footer">
+    <button class="btn btn-back" id="btnBack">Quay lại</button>
+    <button class="btn btn-next" id="btnNext">Tiếp theo</button>
+  </footer>
+
+</div>
+
+<script>
+/* ================== CẤU HÌNH — SỬA DÒNG NÀY ================== */
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxMmh6ZKsj5soC3wqAPd6FQRWyUxNesjYxoDceFK-3s3M_qQ4gLhWdJ__KKhLVzjUKs/exec";
+/* ================================================================ */
+
+const GROUPS = [
+  {code:"I",   name:"Chất lượng dịch vụ & TNKH BRCĐ", count:12},
+  {code:"II",  name:"Chất lượng CSKH GHTT",             count:12},
+  {code:"III", name:"BTBD tập điểm",                    count:12},
+  {code:"IV",  name:"Nghiệm thu hình ảnh",               count:10},
+];
+
+const STEPS = ["Hạng mục","Người kiểm tra","Nội dung kiểm tra","Vị trí & kết quả","Hình ảnh hiện trường","Lỗi & khắc phục","Xác nhận & gửi"];
+
+let state = {
+  group:null, stt:null,
+  nguoiKT:"", chucVu:"", donVi:"", ngayKT: todayStr(),
+  noiDung:"", chiTiet:"", maThueBao:"", tenKH:"",
+  toaDo:"", ketQua:"", hinhAnhQuyDinh:"",
+  loiTonTai:"", phanLoaiLoi:"", nguyenNhan:"", danhGia:"", deXuat:"", boPhan:"", thoiGianKhacPhuc:"",
+  photos:[null,null,null],
+};
+
+let step = 0;
+const totalSteps = 7;
+
+function todayStr(){
+  const d = new Date();
+  return String(d.getDate()).padStart(2,'0')+"/"+String(d.getMonth()+1).padStart(2,'0')+"/"+d.getFullYear();
+}
+
+function currentId(){
+  if(!state.group || !state.stt) return null;
+  return state.group + "-" + String(state.stt).padStart(2,'0');
+}
+
+function renderProgress(){
+  const track = document.getElementById('progressTrack');
+  track.innerHTML = "";
+  for(let i=0;i<totalSteps;i++){
+    const seg = document.createElement('div');
+    seg.className = 'progress-seg' + (i<step?' done':'') + (i===step?' active':'');
+    track.appendChild(seg);
+  }
+  document.getElementById('stepNum').textContent = step+1;
+  document.getElementById('stepName').textContent = STEPS[step];
+  document.getElementById('headerIdChip').textContent = currentId() || "Chưa chọn mục";
+}
+
+function el(html){
+  const t = document.createElement('template');
+  t.innerHTML = html.trim();
+  return t.content.firstChild;
+}
+
+function renderStep(){
+  const main = document.getElementById('main');
+  main.innerHTML = "";
+  renderProgress();
+
+  if(step===0) main.appendChild(stepGroup());
+  if(step===1) main.appendChild(stepPerson());
+  if(step===2) main.appendChild(stepContent());
+  if(step===3) main.appendChild(stepLocation());
+  if(step===4) main.appendChild(stepPhotos());
+  if(step===5) main.appendChild(stepIssue());
+  if(step===6) main.appendChild(stepConfirm());
+
+  document.getElementById('btnBack').style.visibility = step===0 ? 'hidden' : 'visible';
+  const btnNext = document.getElementById('btnNext');
+  btnNext.textContent = step===6 ? "Gửi dữ liệu" : "Tiếp theo";
+  btnNext.className = step===6 ? "btn btn-submit" : "btn btn-next";
+  validateStep();
+}
+
+/* ---------- STEP 0: Group + STT ---------- */
+function stepGroup(){
+  const wrap = el(`<div>
+    <div class="step-heading"><span class="num">1</span><h2 style="display:inline">Chọn hạng mục kiểm tra</h2>
+      <p>Chọn nhóm và số thứ tự tương ứng với hạng mục bạn đang thực hiện.</p>
+    </div>
+    <div class="group-grid" id="groupGrid"></div>
+    <div id="sttArea"></div>
+    <div id="idPreviewArea"></div>
+  </div>`);
+
+  const grid = wrap.querySelector('#groupGrid');
+  GROUPS.forEach(g=>{
+    const btn = el(`<div class="group-btn ${state.group===g.code?'sel':''}">
+      <div class="g">${g.code}</div><div class="t">${g.name}</div>
+    </div>`);
+    btn.onclick = ()=>{ state.group=g.code; state.stt=null; renderStep(); };
+    grid.appendChild(btn);
+  });
+
+  const sttArea = wrap.querySelector('#sttArea');
+  if(state.group){
+    const g = GROUPS.find(x=>x.code===state.group);
+    const sttGrid = el(`<div class="stt-grid"></div>`);
+    for(let n=1;n<=g.count;n++){
+      const b = el(`<div class="stt-btn ${state.stt===n?'sel':''}">${n}</div>`);
+      b.onclick = ()=>{ state.stt=n; renderStep(); };
+      sttGrid.appendChild(b);
+    }
+    sttArea.appendChild(el(`<div class="field" style="margin-top:16px;margin-bottom:0"><label>Số thứ tự trong nhóm ${g.code}</label></div>`));
+    sttArea.appendChild(sttGrid);
+  }
+
+  const idPreview = wrap.querySelector('#idPreviewArea');
+  if(currentId()){
+    idPreview.appendChild(el(`<div class="id-preview"><span>Mã hạng mục</span><b class="mono">${currentId()}</b></div>`));
+  }
+  return wrap;
+}
+
+/* ---------- STEP 1: Người kiểm tra ---------- */
+function stepPerson(){
+  const wrap = el(`<div>
+    <div class="step-heading"><span class="num">2</span><h2 style="display:inline">Thông tin người kiểm tra</h2>
+      <p>Điền thông tin của người thực hiện kiểm tra hôm nay.</p>
+    </div>
+    <div class="field"><label>Họ tên người kiểm tra</label>
+      <input type="text" id="f_nguoiKT" placeholder="VD: Nguyễn Văn A" value="${state.nguoiKT}"></div>
+    <div class="field"><label>Chức vụ</label>
+      <input type="text" id="f_chucVu" placeholder="VD: Kỹ thuật viên địa bàn" value="${state.chucVu}"></div>
+    <div class="field"><label>Đơn vị</label>
+      <input type="text" id="f_donVi" placeholder="VD: Tổ kỹ thuật quận X" value="${state.donVi}"></div>
+    <div class="field"><label>Ngày kiểm tra</label>
+      <input type="text" id="f_ngayKT" value="${state.ngayKT}" disabled style="color:var(--muted);background:#F0F2F1">
+      <div class="hint">Tự động lấy theo ngày hôm nay.</div></div>
+  </div>`);
+  ['nguoiKT','chucVu','donVi'].forEach(k=>{
+    wrap.querySelector('#f_'+k).oninput = e=>{ state[k]=e.target.value; validateStep(); };
+  });
+  return wrap;
+}
+
+/* ---------- STEP 2: Nội dung kiểm tra ---------- */
+function stepContent(){
+  const wrap = el(`<div>
+    <div class="step-heading"><span class="num">3</span><h2 style="display:inline">Nội dung kiểm tra</h2>
+      <p>Mô tả đối tượng và nội dung đang kiểm tra.</p>
+    </div>
+    <div class="field"><label>Nội dung kiểm tra</label>
+      <input type="text" id="f_noiDung" placeholder="VD: Kiểm tra chất lượng lắp đặt" value="${state.noiDung}"></div>
+    <div class="field"><label>Chi tiết nội dung</label>
+      <textarea id="f_chiTiet" placeholder="Mô tả chi tiết hạng mục kiểm tra...">${state.chiTiet}</textarea></div>
+    <div class="field"><label>Mã thuê bao / Mã đặt trạm / Mã tủ cáp, tập điểm</label>
+      <input type="text" id="f_maThueBao" class="mono" placeholder="VD: TB0012345" value="${state.maThueBao}"></div>
+    <div class="field"><label>Tên khách hàng / Địa chỉ đài trạm / Tủ cáp, tập điểm</label>
+      <input type="text" id="f_tenKH" placeholder="VD: Trần Thị B — 12 Lê Lợi, P.3" value="${state.tenKH}"></div>
+  </div>`);
+  const map = {noiDung:'f_noiDung',chiTiet:'f_chiTiet',maThueBao:'f_maThueBao',tenKH:'f_tenKH'};
+  Object.entries(map).forEach(([k,id])=>{
+    wrap.querySelector('#'+id).oninput = e=>{ state[k]=e.target.value; validateStep(); };
+  });
+  return wrap;
+}
+
+/* ---------- STEP 3: Vị trí & kết quả ---------- */
+function stepLocation(){
+  const wrap = el(`<div>
+    <div class="step-heading"><span class="num">4</span><h2 style="display:inline">Vị trí & kết quả</h2>
+      <p>Lấy tọa độ GPS tại hiện trường và ghi nhận kết quả kiểm tra.</p>
+    </div>
+    <div class="field"><label>Tọa độ hiện trường</label>
+      <div class="gps-box ${state.toaDo?'got':''}" id="gpsBox">
+        <button type="button" class="gps-btn" id="gpsBtn">📍 Lấy vị trí hiện tại</button>
+        <div id="gpsStatus" class="gps-status">${state.toaDo?'':'Bấm để định vị bằng GPS điện thoại'}</div>
+        <div id="gpsResult"></div>
+      </div>
+    </div>
+    <div class="field"><label>Kết quả kiểm tra</label>
+      <div class="pill-row" id="pillRow">
+        ${["Đạt","Không đạt","Cần theo dõi"].map(v=>`<div class="pill" data-v="${v}">${v}</div>`).join('')}
+      </div>
+    </div>
+    <div class="field"><label>Hình ảnh kiểm tra (theo quy định)</label>
+      <input type="text" id="f_hinhAnhQD" placeholder="VD: Ảnh toàn cảnh + cận cảnh lỗi" value="${state.hinhAnhQuyDinh}">
+      <div class="hint">Ghi chú yêu cầu về ảnh cần chụp theo quy định (nếu có).</div></div>
+  </div>`);
+
+  if(state.toaDo){
+    const [lat,lng] = state.toaDo.split(",");
+    wrap.querySelector('#gpsResult').innerHTML = `<div class="gps-coord">✓ ${state.toaDo}</div>
+      <a class="map-link" href="https://maps.google.com/?q=${lat},${lng}" target="_blank">Xem trên bản đồ</a>`;
+    wrap.querySelector('#gpsStatus').textContent = "Đã định vị thành công";
+  }
+  wrap.querySelector('#gpsBtn').onclick = ()=>{
+    const status = wrap.querySelector('#gpsStatus');
+    status.textContent = "Đang định vị...";
+    if(!navigator.geolocation){ status.textContent="Trình duyệt không hỗ trợ GPS"; return; }
+    navigator.geolocation.getCurrentPosition(pos=>{
+      const lat = pos.coords.latitude.toFixed(6);
+      const lng = pos.coords.longitude.toFixed(6);
+      state.toaDo = lat+","+lng;
+      renderStep();
+    }, err=>{
+      status.textContent = "Không lấy được vị trí — kiểm tra quyền định vị của trình duyệt";
+    }, {enableHighAccuracy:true, timeout:12000});
+  };
+
+  wrap.querySelectorAll('.pill').forEach(p=>{
+    if(p.dataset.v===state.ketQua) p.classList.add('sel');
+    p.onclick = ()=>{ state.ketQua=p.dataset.v; renderStep(); };
+  });
+
+  wrap.querySelector('#f_hinhAnhQD').oninput = e=>{ state.hinhAnhQuyDinh=e.target.value; };
+  return wrap;
+}
+
+/* ---------- STEP 4: Photos ---------- */
+function stepPhotos(){
+  const wrap = el(`<div>
+    <div class="step-heading"><span class="num">5</span><h2 style="display:inline">Hình ảnh hiện trường</h2>
+      <p>Chụp trực tiếp hoặc chọn ảnh có sẵn — tối đa 3 ảnh.</p>
+    </div>
+    <div class="photo-grid" id="photoGrid"></div>
+  </div>`);
+  const grid = wrap.querySelector('#photoGrid');
+  [0,1,2].forEach(i=>{
+    const slot = el(`<div class="photo-slot ${state.photos[i]?'filled':''}">
+      ${state.photos[i]
+        ? `<img src="${state.photos[i]}"><div class="rm" data-i="${i}">✕</div>`
+        : `<div class="plus">＋</div><div class="lab">Ảnh ${i+1}</div>`}
+      <input type="file" accept="image/*" capture="environment" style="display:none" id="file_${i}">
+    </div>`);
+    const input = slot.querySelector('input');
+    slot.addEventListener('click', (e)=>{
+      if(e.target.classList.contains('rm')){
+        e.stopPropagation();
+        state.photos[i]=null; renderStep(); return;
+      }
+      input.click();
+    });
+    input.onchange = (e)=>{
+      const file = e.target.files[0];
+      if(!file) return;
+      compressImage(file, dataUrl=>{ state.photos[i]=dataUrl; renderStep(); });
+    };
+    grid.appendChild(slot);
+  });
+  return wrap;
+}
+
+function compressImage(file, cb){
+  const reader = new FileReader();
+  reader.onload = ev=>{
+    const img = new Image();
+    img.onload = ()=>{
+      const maxW = 1280;
+      const scale = Math.min(1, maxW/img.width);
+      const canvas = document.createElement('canvas');
+      canvas.width = img.width*scale;
+      canvas.height = img.height*scale;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img,0,0,canvas.width,canvas.height);
+      cb(canvas.toDataURL('image/jpeg',0.72));
+    };
+    img.src = ev.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+/* ---------- STEP 5: Issue ---------- */
+function stepIssue(){
+  const isFail = state.ketQua === "Không đạt";
+  const wrap = el(`<div>
+    <div class="step-heading"><span class="num">6</span><h2 style="display:inline">Lỗi & đề xuất khắc phục</h2>
+      <p>${isFail ? "Ghi nhận lỗi tồn tại và hướng xử lý." : "Không bắt buộc nếu kết quả kiểm tra đạt yêu cầu."}</p>
+    </div>
+    <div class="field"><label>Lỗi tồn tại</label>
+      <textarea id="f_loi" placeholder="Mô tả lỗi phát hiện...">${state.loiTonTai}</textarea></div>
+    <div class="field"><label>Phân loại lỗi</label>
+      <select id="f_phanLoai">
+        <option value="">— Chọn phân loại —</option>
+        <option ${state.phanLoaiLoi==="Kỹ thuật"?'selected':''}>Kỹ thuật</option>
+        <option ${state.phanLoaiLoi==="Dịch vụ khách hàng"?'selected':''}>Dịch vụ khách hàng</option>
+        <option ${state.phanLoaiLoi==="An toàn lao động"?'selected':''}>An toàn lao động</option>
+        <option ${state.phanLoaiLoi==="Khác"?'selected':''}>Khác</option>
+      </select></div>
+    <div class="field"><label>Nguyên nhân tồn tại (nếu có)</label>
+      <textarea id="f_nguyenNhan" placeholder="Nguyên nhân dẫn đến lỗi...">${state.nguyenNhan}</textarea></div>
+    <div class="field"><label>Đánh giá</label>
+      <input type="text" id="f_danhGia" placeholder="Mức độ ảnh hưởng, đánh giá chung" value="${state.danhGia}"></div>
+    <div class="field"><label>Đề xuất khắc phục</label>
+      <textarea id="f_deXuat" placeholder="Hướng xử lý đề xuất...">${state.deXuat}</textarea></div>
+    <div class="field"><label>Bộ phận / cá nhân chịu trách nhiệm khắc phục</label>
+      <input type="text" id="f_boPhan" placeholder="VD: Tổ kỹ thuật quận X" value="${state.boPhan}"></div>
+    <div class="field"><label>Thời gian yêu cầu khắc phục</label>
+      <input type="date" id="f_thoiGian" value="${state.thoiGianKhacPhuc}"></div>
+  </div>`);
+  const map = {loi:'loiTonTai', nguyenNhan:'nguyenNhan', danhGia:'danhGia', deXuat:'deXuat', boPhan:'boPhan'};
+  Object.entries(map).forEach(([id,k])=>{
+    wrap.querySelector('#f_'+id).oninput = e=>{ state[k]=e.target.value; };
+  });
+  wrap.querySelector('#f_phanLoai').onchange = e=>{ state.phanLoaiLoi=e.target.value; };
+  wrap.querySelector('#f_thoiGian').onchange = e=>{ state.thoiGianKhacPhuc=e.target.value; };
+  return wrap;
+}
+
+/* ---------- STEP 6: Confirm ---------- */
+function stepConfirm(){
+  const wrap = el(`<div>
+    <div class="step-heading"><span class="num">7</span><h2 style="display:inline">Xác nhận & gửi</h2>
+      <p>Kiểm tra lại thông tin trước khi gửi lên hệ thống.</p>
+    </div>
+    <div class="summary-card">
+      <h3>Hạng mục</h3>
+      <div class="srow"><span class="k">Mã</span><span class="v mono">${currentId()||'—'}</span></div>
+      <div class="srow"><span class="k">Người kiểm tra</span><span class="v">${state.nguoiKT||'—'}</span></div>
+      <div class="srow"><span class="k">Đơn vị</span><span class="v">${state.donVi||'—'}</span></div>
+      <div class="srow"><span class="k">Ngày</span><span class="v">${state.ngayKT}</span></div>
+    </div>
+    <div class="summary-card">
+      <h3>Nội dung & kết quả</h3>
+      <div class="srow"><span class="k">Nội dung</span><span class="v">${state.noiDung||'—'}</span></div>
+      <div class="srow"><span class="k">Kết quả</span><span class="v">${state.ketQua||'—'}</span></div>
+      <div class="srow"><span class="k">Tọa độ</span><span class="v mono">${state.toaDo||'—'}</span></div>
+      <div class="srow"><span class="k">Ảnh đã chụp</span><span class="v">${state.photos.filter(Boolean).length}/3</span></div>
+    </div>
+    <div id="submitMsg"></div>
+  </div>`);
+  return wrap;
+}
+
+/* ---------- Validation ---------- */
+function validateStep(){
+  const btn = document.getElementById('btnNext');
+  let ok = true;
+  if(step===0) ok = !!(state.group && state.stt);
+  if(step===1) ok = !!(state.nguoiKT.trim() && state.donVi.trim());
+  if(step===2) ok = !!state.noiDung.trim();
+  if(step===3) ok = !!(state.toaDo && state.ketQua);
+  btn.disabled = !ok;
+}
+
+/* ---------- Navigation ---------- */
+document.getElementById('btnBack').onclick = ()=>{ if(step>0){ step--; renderStep(); } };
+document.getElementById('btnNext').onclick = ()=>{
+  if(step<6){ step++; renderStep(); }
+  else { submitData(); }
+};
+
+function showToast(msg, loading){
+  let t = document.querySelector('.toast');
+  if(t) t.remove();
+  t = el(`<div class="toast">${loading?'<span class="spinner"></span>':''}${msg}</div>`);
+  document.getElementById('app').appendChild(t);
+  return t;
+}
+
+function submitData(){
+  const btn = document.getElementById('btnNext');
+  btn.disabled = true;
+  btn.textContent = "Đang gửi...";
+  const toast = showToast("Đang gửi dữ liệu lên Google Sheets...", true);
+
+  const payload = {
+    "ID": currentId(),
+    "Nhóm kiểm tra": state.group,
+    "STT trong nhóm": state.stt,
+    "Người kiểm tra": state.nguoiKT,
+    "Chức vụ": state.chucVu,
+    "Đơn vị": state.donVi,
+    "Ngày kiểm tra": state.ngayKT,
+    "Nội dung kiểm tra": state.noiDung,
+    "Chi tiết nội dung": state.chiTiet,
+    "Mã thuê bao/Mã đặt trạm/Mã Tủ cáp, tập điểm": state.maThueBao,
+    "Tên khách hàng/Địa chỉ đài trạm/Tủ cáp, tập điểm": state.tenKH,
+    "Tọa độ": state.toaDo,
+    "Kết quả kiểm tra": state.ketQua,
+    "Hình ảnh kiểm tra (theo quy định)": state.hinhAnhQuyDinh,
+    "Lỗi tồn tại": state.loiTonTai,
+    "Phân loại lỗi": state.phanLoaiLoi,
+    "Nguyên nhân tồn tại (nếu có)": state.nguyenNhan,
+    "Đánh giá": state.danhGia,
+    "Đề xuất khắc phục": state.deXuat,
+    "Bộ phận/Cá nhân chịu trách nhiệm khắc phục": state.boPhan,
+    "Thời gian yêu cầu khắc phục": state.thoiGianKhacPhuc,
+    "Hình ảnh 1": state.photos[0] || "",
+    "Hình ảnh 2": state.photos[1] || "",
+    "Hình ảnh 3": state.photos[2] || "",
+  };
+
+  fetch(APPS_SCRIPT_URL, { method:"POST", body: JSON.stringify(payload) })
+    .then(r=>r.text())
+    .then(txt=>{
+      toast.remove();
+      showDoneScreen(true, txt);
+    })
+    .catch(err=>{
+      toast.remove();
+      showDoneScreen(false, err.message);
+    });
+}
+
+function showDoneScreen(success, msg){
+  const app = document.getElementById('app');
+  app.innerHTML = `<div class="done-screen">
+    <div class="done-badge" style="${success?'':'background:#FBEBE7;color:var(--danger)'}">${success?'✓':'!'}</div>
+    <h2>${success?'Đã gửi thành công':'Gửi thất bại'}</h2>
+    <p>${success
+        ? 'Dữ liệu và hình ảnh của mục <b>'+currentId()+'</b> đã được ghi vào Google Sheets.'
+        : 'Có lỗi xảy ra: '+msg+'. Kiểm tra kết nối mạng và thử lại.'}</p>
+    <button class="btn btn-next" style="max-width:220px" onclick="location.reload()">
+      ${success ? 'Nhập mục khác' : 'Thử lại'}
+    </button>
+  </div>`;
+}
+
+renderStep();
+</script>
+</body>
+</html>
