@@ -52,7 +52,7 @@ chucVu:["HTKT","PGD","Tổ trưởng"],
 donVi:["BGD","KV Tổ KTĐB Bình Mỹ 1","KV Tổ KTĐB Bình Mỹ 2","KV Tổ KTĐB Củ Chi 1","KV Tổ KTĐB Củ Chi 2","KV Tổ KTĐB Phú Hòa Đông 1","KV Tổ KTĐB Phú Hòa Đông 2"],
 noiDung:["Trải nghiệm KH","GHTT","BTBD","NTHA"]
 };
-const PERSON_ROLE_MAP={"Đỗ Thanh Hiệp":"HTKT","Nguyễn Hữu Tòng":"PGD","Nguyễn Anh Tuấn":"Tổ trưởng","Ngô Văn Thành":"Tổ trưởng","Lê Châu Duy Triệu":"Tổ trưởng","Nguyễn Hoài Trung":"Tổ trưởng","Lê Minh Long":"Tổ trưởng"};
+const PERSON_ROLE_MAP={"Đỗ Thanh Hiệp":"HTKT","Nguyễn Hữu Tòng":"PGD","Nguyễn Anh Tuấn":"Tổ trưởng","Nguyễn Văn Toàn":"Tổ trưởng","Ngô Văn Thành":"Tổ trưởng","Lê Châu Duy Triệu":"Tổ trưởng","Nguyễn Hoài Trung":"Tổ trưởng","Lê Minh Long":"Tổ trưởng"};
 const STEPS=["Hạng mục","Người kiểm tra","Nội dung kiểm tra","Vị trí & kết quả","Hình ảnh hiện trường","Lỗi & khắc phục","Xác nhận & gửi"];
 function todayStr(){const d=new Date();return String(d.getDate()).padStart(2,"0")+"/"+String(d.getMonth()+1).padStart(2,"0")+"/"+d.getFullYear()}
 function toDateInput(v){if(!v)return "";const p=v.split("/");return p.length===3?`${p[2]}-${p[1]}-${p[0]}`:v}
